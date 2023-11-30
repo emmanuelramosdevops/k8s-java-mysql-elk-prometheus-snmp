@@ -1,0 +1,179 @@
+---
+clusterName: "elasticsearch"
+nodeGroup: "master"
+masterService: ""
+nodeSelector: 
+  node-group: infra
+
+image: "docker.elastic.co/elasticsearch/elasticsearch"
+imageTag: "8.9.0"
+imagePullPolicy: "IfNotPresent"
+
+replicas: 1
+minimumMasterNodes: 1
+dataPath: /mnt/elasticsearch/data
+
+createCert: true
+protocol: https
+httpPort: 9200
+transportPort: 9300
+
+secret:
+  enabled: true
+  password: ""
+
+persistence:
+  enabled: true
+  labels:
+    enabled: false
+  annotations: {}
+  
+volumeClaimTemplate:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+
+antiAffinityTopologyKey: "kubernetes.io/hostname"
+antiAffinity: "soft"
+nodeAffinity: {}
+
+roles:
+  - master
+  - data
+  - data_content
+  - data_hot
+  - data_warm
+  - data_cold
+  - ingest
+  - ml
+  - remote_cluster_client
+  - transform
+
+esMajorVersion: ""
+esConfig: {}
+esJvmOptions: {}
+extraEnvs: []
+envFrom: []
+esJavaOpts: "" 
+
+secretMounts: []
+hostAliases: []
+podAnnotations: {}
+labels: {}
+
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
+
+initResources: {}
+
+networkHost: "0.0.0.0"
+
+rbac:
+  create: false
+  serviceAccountAnnotations: {}
+  serviceAccountName: ""
+  automountToken: true
+
+podSecurityPolicy:
+  create: false
+  name: ""
+  spec:
+    privileged: true
+    fsGroup:
+      rule: RunAsAny
+    runAsUser:
+      rule: RunAsAny
+    seLinux:
+      rule: RunAsAny
+    supplementalGroups:
+      rule: RunAsAny
+    volumes:
+      - secret
+      - configMap
+      - persistentVolumeClaim
+      - emptyDir
+
+extraVolumes: []
+extraVolumeMounts: []
+extraContainers: []
+extraInitContainers: []
+priorityClassName: ""
+podManagementPolicy: "Parallel"
+enableServiceLinks: true
+
+service:
+  enabled: true
+  labels: {}
+  labelsHeadless: {}
+  type: ClusterIP
+
+  publishNotReadyAddresses: false
+  nodePort: ""
+  annotations: {}
+  httpPortName: http
+  transportPortName: transport
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  externalTrafficPolicy: ""
+
+updateStrategy: RollingUpdate
+
+maxUnavailable: 1
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  runAsUser: 1000
+
+terminationGracePeriod: 120
+sysctlVmMaxMapCount: 262144
+
+readinessProbe:
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 3
+  timeoutSeconds: 5
+
+clusterHealthCheckParams: "wait_for_status=green&timeout=1s"
+
+schedulerName: ""
+
+imagePullSecrets: []
+tolerations: []
+
+ingress:
+  enabled: false
+  annotations: {}
+  className: "nginx"
+  pathtype: ImplementationSpecific
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+  tls: []
+
+nameOverride: ""
+fullnameOverride: ""
+healthNameOverride: ""
+lifecycle: {}
+
+sysctlInitContainer:
+  enabled: true
+
+keystore: []
+
+networkPolicy:
+  http:
+    enabled: false
+  transport:
+    enabled: false

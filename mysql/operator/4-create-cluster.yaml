@@ -1,0 +1,38 @@
+## InnoDBCluster
+apiVersion: mysql.oracle.com/v2
+kind: InnoDBCluster
+metadata:
+  name: mysql-cluster-1
+  namespace: infra
+spec:
+  secretName: mysql-secret
+  tlsUseSelfSigned: true
+  imagePullPolicy: IfNotPresent
+  instances: 1
+  version: 8.0.34
+  podSpec:
+    containers:
+    - name: mysql
+      resources:
+        requests:
+          memory: "500Mi"
+          cpu: "180m"
+        limits:
+          memory: "1000Mi"
+          cpu: "360m"
+      nodeSelector:
+        node-group: infra-1
+  router:
+    instances: 1
+    version: 8.0.34
+  datadirVolumeClaimTemplate:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+  mycnf: |
+    [mysqld]
+    max_connections=100
+    server-id=1
+    log-bin="mysql-bin"

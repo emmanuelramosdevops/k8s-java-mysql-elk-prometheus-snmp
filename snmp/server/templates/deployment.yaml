@@ -1,0 +1,68 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: snmp-server
+spec:
+  type: ClusterIP
+  ports:
+    - name: snmp
+      port: 162
+      targetPort: 1162
+      protocol: UDP
+  selector:
+    app.kubernetes.io/name: snmp-server
+    app.kubernetes.io/instance: release-name
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snmp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: snmp-server
+      app.kubernetes.io/instance: release-name
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: snmp-server
+        app.kubernetes.io/instance: release-name
+      annotations: {}
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: snmp-server
+          image: "zabbix/zabbix-snmptraps"
+          imagePullPolicy: IfNotPresent
+          args:
+          resources: {}
+          ports:
+            - containerPort: 1162
+              name: snmp
+          volumeMounts:
+            - name: mibs
+              mountPath: "/var/lib/zabbix/mibs"
+              readOnly: true
+            - name: configuration
+              mountPath: "/etc/snmp"
+              readOnly: true
+      volumes:
+        - name: mibs
+          configMap:
+            name: snmp-notifier-mib
+            items:
+              - key: "SNMP-NOTIFIER-MIB.my"
+                path: "SNMP-NOTIFIER-MIB.my"
+        - name: configuration
+          configMap:
+            name: snmptrapd-configuration
+            items:
+              - key: "snmptrapd.conf"
+                path: "snmptrapd.conf"

@@ -1,0 +1,254 @@
+server:
+  name: server
+  enabled: true
+  image:
+    repository: victoriametrics/vmalert
+    tag: "v1.93.1" 
+    pullPolicy: IfNotPresent
+
+  nodeSelector:
+    node-group: infra
+ 
+  replicaCount: 1
+  configMap: ""
+
+  config:
+    alerts:
+      groups:
+        - name: Errors
+          rules:
+            - alert: ConnectFailed
+              expr: changes(timeout_total{app="api"}[1m]) > 0
+              for: 20s
+              labels:
+                severity: "critical"
+                oid: "1.3.6.1.4.1.12511.72.2.812"
+              annotations:
+                summary: "Timeout for host: {{ $labels.host }}"
+                description: "Timeout for host: {{ $labels.host }}"
+            - alert: HighPCFResponseTime
+              expr: histogram_quantile(0.99, sum(rate(api_latency_seconds_bucket[2m])) by (host, le)) > 1
+              for: 1m
+              labels:
+                severity: "critical"
+                oid: "1.3.6.1.4.1.12511.72.2.813"
+              annotations:
+                summary: "Latency high for host: {{ $labels.host }}"
+                description: "99% latency is higher than 1 second for host: {{ $labels.host }}"
+            - alert: GenerationFailure
+              expr: changes(exception_total{app="api"}[1m]) > 0
+              for: 20s
+              labels:
+                severity: "critical"
+                oid: "1.3.6.1.4.1.12511.72.2.814"
+              annotations:
+                summary: "Failure generating CDR at pod: {{ $labels.pod }}"
+                description: "Failure generating CDR at pod: {{ $labels.pod }}"
+            - alert: DatabaseUnavailable
+              expr: up{job="mysql"} == 0
+              for: 20s
+              labels:
+                severity: "critical"
+                oid: "1.3.6.1.4.1.12511.72.2.815"
+              annotations:
+                summary: "MySQL instance down: [{{ $labels.instance }}]"
+                description: "Instance: [{{ $labels.instance }}] has been down for more than 60 seconds."
+            - alert: AddrNotFound
+              expr: changes(not_found_total{app="api"}[1m]) > 0
+              for: 20s
+              labels:
+                severity: "critical"
+                oid: "1.3.6.1.4.1.12511.72.2.817"
+              annotations:
+                summary: "Network not found on pod {{ $labels.pod }}"
+                description: "Network not found on pod {{ $labels.pod }}"
+
+  datasource: 
+    url: "http://vm-cluster-vmselect:8481/select/0/prometheus"
+    basicAuth:
+      username: ""
+      password: ""
+    bearer:
+      token: ""
+      tokenFile: ""
+  
+  remote:
+    write: 
+      url: "http://vm-cluster-vminsert:8480/insert/0/prometheus"
+      basicAuth:
+        username: ""
+        password: ""
+      bearer:
+        token: ""
+        tokenFile: ""
+    read:  
+      url: "http://vm-cluster-vmselect:8481/select/0/prometheus"
+      basicAuth:
+        username: ""
+        password: ""
+      bearer:
+        token: ""
+        tokenFile: ""
+  
+  notifier:
+    alertmanager: 
+      url: "http://vm-alert-alertmanager:9093"
+      basicAuth:
+        username: ""
+        password: ""
+      bearer:
+        token: ""
+        tokenFile: ""
+
+  probe:
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    liveness:
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+
+  minReadySeconds: 0
+  notifiers: []
+
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+
+  extraHostPathMounts: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  extraContainers: []
+
+  service:
+    annotations: {}
+    labels: {}
+    clusterIP: ""
+    externalIPs: []
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    servicePort: 8880
+    type: ClusterIP
+
+  ingress:
+    enabled: false
+    annotations: {}
+    extraLabels: {}
+    hosts: []
+    tls: []
+    pathType: Prefix
+
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+  annotations: {}
+  labels: {}
+  podAnnotations: {}
+  podLabels: {}
+  priorityClassName: ""
+  tolerations: []
+  affinity: {}
+  podDisruptionBudget:
+    enabled: false
+    labels: {}
+  nameOverride: ""
+  fullnameOverride: ""
+  env: []
+
+alertmanager:
+  enabled: true
+  image: prom/alertmanager
+  tag: v0.26.0
+  
+  nodeSelector: 
+    node-group: infra
+
+  config:
+    global:
+      resolve_timeout: 1m
+    
+    route:
+      group_by: ['alertname']
+      group_wait: 30s
+      group_interval: 5m
+      receiver: "snmp_notifier"
+    
+    receivers:
+      - name: "snmp_notifier"
+        webhook_configs:
+          - send_resolved: true
+            url: http://snmp-notifier:9464/alerts
+
+  persistentVolume:
+    enabled: false
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+    storageClass: ""
+    existingClaim: ""
+    mountPath: /data
+    subPath: ""
+    size: 50Mi
+  retention: 120h
+
+  baseURL: "http://vm-alert-alertmanager:9093"
+  baseURLPrefix: ""
+  configMap: ""
+
+  podMetadata:
+    labels: {}
+    annotations: {}
+  
+  priorityClassName: ""
+  resources: {}
+  tolerations: []
+  imagePullSecrets: []
+  podSecurityContext: {}
+  extraArgs: {}
+  templates: {}
+  
+  service:
+    annotations: {}
+    type: ClusterIP
+    port: 9093
+
+  ingress:
+    enabled: false
+    annotations: {}
+    extraLabels: {}
+    hosts: []
+    tls: []
+    pathType: Prefix
+
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name:
+  automountToken: true
+
+rbac:
+  create: true
+  pspEnabled: true
+  namespaced: false
+  extraLabels: {}
+  annotations: {}
+
+serviceMonitor:
+  enabled: false
+  extraLabels: {}
+  annotations: {}
+  relabelings: []
+
+imagePullSecrets: []

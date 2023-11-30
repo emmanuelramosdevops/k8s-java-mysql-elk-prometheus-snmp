@@ -1,0 +1,141 @@
+---
+image: "docker.elastic.co/beats/filebeat"
+imageTag: "8.9.0"
+imagePullPolicy: "IfNotPresent"
+imagePullSecrets: []
+hostPathRoot: /mnt
+
+daemonset:
+  enabled: true
+  nodeSelector:
+    node-group: app
+
+  extraEnvs:
+    - name: "ELASTICSEARCH_USERNAME"
+      valueFrom:
+        secretKeyRef:
+          name: elasticsearch-master-credentials
+          key: username
+
+    - name: "ELASTICSEARCH_PASSWORD"
+      valueFrom:
+        secretKeyRef:
+          name: elasticsearch-master-credentials
+          key: password
+
+    - name: "ELASTICSEARCH_HOST"
+      value: elasticsearch-master.infra.svc
+
+    - name: "ELASTICSEARCH_PORT"
+      value: "9200"
+
+  filebeatConfig:
+    filebeat.yml: |
+      filebeat.inputs:
+      - type: filestream
+        id: api
+        paths:
+          - /var/log/api/*.log
+      
+      processors:
+        - decode_json_fields:
+            fields: ["message"]
+
+      output.elasticsearch:
+        hosts: '["https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"]'
+        username: '${ELASTICSEARCH_USERNAME}'
+        password: '${ELASTICSEARCH_PASSWORD}'
+        protocol: https
+        ssl.certificate_authorities: ["/usr/share/filebeat/certs/ca.crt"]
+      
+      # output.console:
+      #   pretty: true
+
+  secretMounts:
+    - name: elasticsearch-master-certs
+      secretName: elasticsearch-master-certs
+      path: /usr/share/filebeat/certs/
+
+  securityContext:
+    runAsUser: 0
+    privileged: false
+
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "200Mi"
+
+  maxUnavailable: 1
+  extraVolumes: []
+  extraVolumeMounts: []
+  hostNetworking: false
+  affinity: {}
+  annotations: {}
+  labels: {}
+  envFrom: []
+  tolerations: []
+
+livenessProbe:
+  exec:
+    command:
+      - sh
+      - -c
+      - |
+        #!/usr/bin/env bash -e
+        curl --fail 127.0.0.1:5066
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+
+readinessProbe:
+  exec:
+    command:
+      - sh
+      - -c
+      - |
+        #!/usr/bin/env bash -e
+        filebeat test output
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+
+clusterRoleRules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - nodes
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "apps"
+    resources:
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+
+managedServiceAccount: true
+podAnnotations: {}
+
+serviceAccount: ""
+serviceAccountAnnotations: {}
+
+terminationGracePeriod: 30
+
+priorityClassName: ""
+nameOverride: ""
+fullnameOverride: ""
+
+updateStrategy: RollingUpdate
+
+extraContainers: ""
+extraInitContainers: []
+dnsConfig: {}
+hostAliases: []

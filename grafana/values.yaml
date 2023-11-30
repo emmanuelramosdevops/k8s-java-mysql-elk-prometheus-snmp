@@ -1,0 +1,434 @@
+global:
+  imagePullSecrets: []
+
+nodeSelector:
+  node-group: infra
+
+replicas: 1
+
+adminUser: admin
+
+admin:
+  existingSecret: ""
+  userKey: admin-user
+  passwordKey: admin-password
+
+persistence:
+  type: pvc
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  finalizers:
+    - kubernetes.io/pvc-protection
+  extraPvcLabels: {}
+  inMemory:
+    enabled: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: prometheus
+      type: prometheus
+      url: http://vm-cluster-vmselect:8481/select/0/prometheus
+      access: proxy
+      isDefault: true
+
+dashboardProviders:
+  providers.yaml:
+    apiVersion: 1
+    providers: 
+      - name: 'file'
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: true
+        type: file
+
+dashboards:
+  api:
+    api:
+      file: dashboards/api.json
+    mysql:
+      file: dashboards/mysql.json
+    jvm:
+      file: dashboards/jvm.json
+    
+rbac:
+  create: true 
+  pspEnabled: false
+  pspUseAppArmor: false
+  namespaced: false
+  extraRoleRules: []
+  extraClusterRoleRules: []
+
+serviceAccount:
+  create: true
+  name:
+  nameTest:
+  labels: {}
+  autoMount: true
+
+headlessService: false
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPU: "60"
+  targetMemory: ""
+  behavior: {}
+
+podDisruptionBudget: {}
+
+deploymentStrategy:
+  type: RollingUpdate
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 60
+  timeoutSeconds: 30
+  failureThreshold: 10
+
+image:
+  repository: docker.io/grafana/grafana
+  tag: ""
+  sha: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+testFramework:
+  enabled: true
+  image: docker.io/bats/bats
+  tag: "v1.4.1"
+  imagePullPolicy: IfNotPresent
+  securityContext: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+createConfigmap: true
+
+extraConfigmapMounts: []
+extraEmptyDirMounts: []
+extraLabels: {}
+
+downloadDashboardsImage:
+  repository: docker.io/curlimages/curl
+  tag: 7.85.0
+  sha: ""
+  pullPolicy: IfNotPresent
+
+downloadDashboards:
+  env: {}
+  envFromSecret: ""
+  resources: {}
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  envValueFrom: {}
+
+podPortName: grafana
+gossipPortName: gossip
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  annotations: {}
+  labels: {}
+  portName: service
+  appProtocol: ""
+
+serviceMonitor:
+  enabled: false
+  path: /metrics
+  labels: {}
+  interval: 1m
+  scheme: http
+  tlsConfig: {}
+  scrapeTimeout: 30s
+  relabelings: []
+  metricRelabelings: []
+  targetLabels: []
+
+extraExposePorts: []
+hostAliases: []
+
+ingress:
+  enabled: false
+  annotations: {}
+  labels: {}
+  path: /
+  pathType: Prefix
+  hosts:
+    - chart-example.local
+  extraPaths: []
+  tls: []
+
+resources: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+extraInitContainers: []
+extraContainers: ""
+extraContainerVolumes: []
+
+initChownData:
+  enabled: true
+  image:
+    repository: docker.io/library/busybox
+    tag: "1.31.1"
+    sha: ""
+    pullPolicy: IfNotPresent
+  resources: {}
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      add:
+        - CHOWN
+
+env: {}
+envValueFrom: {}
+envFromSecret: ""
+envRenderSecret: {}
+envFromSecrets: []
+envFromConfigMaps: []
+enableServiceLinks: true
+extraSecretMounts: []
+extraVolumeMounts: []
+lifecycleHooks: {}
+plugins: []
+
+alerting: {}
+
+notifiers: {}
+
+grafana.ini:
+  paths:
+    data: /var/lib/grafana/
+    logs: /var/log/grafana
+    plugins: /var/lib/grafana/plugins
+    provisioning: /etc/grafana/provisioning
+  analytics:
+    check_for_updates: true
+  log:
+    mode: console
+  grafana_net:
+    url: https://grafana.net
+  server:
+    domain: "{{ if (and .Values.ingress.enabled .Values.ingress.hosts) }}{{ .Values.ingress.hosts | first }}{{ else }}''{{ end }}"
+
+ldap:
+  enabled: false
+  existingSecret: ""
+  config: ""
+
+smtp:
+  existingSecret: ""
+  userKey: "user"
+  passwordKey: "password"
+
+sidecar:
+  image:
+    repository: quay.io/kiwigrid/k8s-sidecar
+    tag: 1.24.6
+    sha: ""
+  imagePullPolicy: IfNotPresent
+  resources: {}
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    seccompProfile:
+      type: RuntimeDefault
+ 
+  enableUniqueFilenames: false
+  readinessProbe: {}
+  livenessProbe: {}
+
+  alerts:
+    enabled: false
+    env: {}
+    label: grafana_alert
+    labelValue: ""
+    searchNamespace: null
+    watchMethod: WATCH
+    resource: both
+    reloadURL: "http://localhost:3000/api/admin/provisioning/alerting/reload"
+    script: null
+    skipReload: false
+    extraMounts: []
+    sizeLimit: {}
+  
+  dashboards:
+    enabled: false
+    env: {}
+    SCProvider: true
+    label: grafana_dashboard
+    labelValue: ""
+    folder: /tmp/dashboards
+    defaultFolderName: null
+    searchNamespace: null
+    watchMethod: WATCH
+    resource: both
+    folderAnnotation: null
+    reloadURL: "http://localhost:3000/api/admin/provisioning/dashboards/reload"
+    script: null
+    skipReload: false
+    provider:
+      name: sidecarProvider
+      orgid: 1
+      folder: ''
+      type: file
+      disableDelete: false
+      allowUiUpdates: false
+      foldersFromFilesStructure: false
+    extraMounts: []
+    sizeLimit: {}
+  
+  datasources:
+    enabled: false
+    env: {}
+    label: grafana_datasource
+    labelValue: ""
+    searchNamespace: null
+    watchMethod: WATCH
+    resource: both
+    reloadURL: "http://localhost:3000/api/admin/provisioning/datasources/reload"
+    script: null
+    skipReload: false
+    initDatasources: false
+    sizeLimit: {}
+  
+  plugins:
+    enabled: false
+    env: {}
+    label: grafana_plugin
+    labelValue: ""
+    searchNamespace: null
+    watchMethod: WATCH
+    resource: both
+    reloadURL: "http://localhost:3000/api/admin/provisioning/plugins/reload"
+    script: null
+    skipReload: false
+    initPlugins: false
+    sizeLimit: {}
+  
+  notifiers:
+    enabled: false
+    env: {}
+    label: grafana_notifier
+    labelValue: ""
+    searchNamespace: null
+    watchMethod: WATCH
+    resource: both
+    reloadURL: "http://localhost:3000/api/admin/provisioning/notifications/reload"
+    script: null
+    skipReload: false
+    initNotifiers: false
+    sizeLimit: {}
+
+namespaceOverride: ""
+revisionHistoryLimit: 3
+
+imageRenderer:
+  deploymentStrategy: {}
+  enabled: false
+  replicas: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPU: "60"
+    targetMemory: ""
+    behavior: {}
+  image:
+    repository: docker.io/grafana/grafana-image-renderer
+    tag: latest
+    sha: ""
+    pullPolicy: Always
+  env:
+    HTTP_HOST: "0.0.0.0"
+  envValueFrom: {}
+  serviceAccountName: ""
+  securityContext: {}
+  containerSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop: ['ALL']
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+  hostAliases: []
+  priorityClassName: ''
+  service:
+    enabled: true
+    portName: 'http'
+    port: 8081
+    targetPort: 8081
+    appProtocol: ""
+  serviceMonitor:
+    enabled: false
+    path: /metrics
+    labels: {}
+    interval: 1m
+    scheme: http
+    tlsConfig: {}
+    scrapeTimeout: 30s
+    relabelings: []
+    targetLabels: []
+  grafanaProtocol: http
+  grafanaSubPath: ""
+  podPortName: http
+  revisionHistoryLimit: 10
+  networkPolicy:
+    limitIngress: true
+    limitEgress: false
+    extraIngressSelectors: []
+  resources: {}
+
+  tolerations: []
+  affinity: {}
+
+networkPolicy:
+  enabled: false
+  ingress: true
+  allowExternal: true
+  explicitNamespacesSelector: {}
+  egress:
+    enabled: false
+    ports: []
+
+enableKubeBackwardCompatibility: false
+useStatefulSet: false
+extraObjects: []

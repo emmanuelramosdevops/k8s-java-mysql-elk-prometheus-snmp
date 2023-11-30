@@ -1,0 +1,13 @@
+---
+namespace: app
+
+service:
+  port: 8080
+  type: ClusterIP
+
+pod:
+  image: local/external-api:30-11-18-54
+  port: 8080
+
+deployment:
+  replicas: 1

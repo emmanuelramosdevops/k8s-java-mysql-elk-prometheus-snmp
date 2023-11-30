@@ -1,0 +1,4 @@
+apiVersion: v2
+appVersion: v1.4.0
+name: snmp-notifier
+version: 0.1.2

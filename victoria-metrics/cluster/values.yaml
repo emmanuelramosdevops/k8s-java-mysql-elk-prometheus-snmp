@@ -1,0 +1,335 @@
+clusterDomainSuffix: cluster.local
+printNotes: true
+
+rbac:
+  create: true
+  pspEnabled: true
+  namespaced: false
+  extraLabels: {}
+
+serviceAccount:
+  create: true
+  extraLabels: {}
+  automountToken: true
+
+extraSecrets: []
+
+
+vmselect:
+  enabled: true
+  name: vmselect
+  image:
+    repository: victoriametrics/vmselect
+    tag: v1.93.1-cluster
+    pullPolicy: IfNotPresent
+  nodeSelector:
+    node-group: infra  
+  replicaCount: 1
+  strategy: {}
+  priorityClassName: ""
+  fullnameOverride: ""
+  suppressStorageFQDNsRender: false
+  automountServiceAccountToken: true
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+  annotations: {}
+  extraLabels: {}
+  env: []
+  probe:
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    liveness:
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+  horizontalPodAutoscaler:
+    enabled: false
+    maxReplicas: 1
+    minReplicas: 1
+    metrics: []
+  extraHostPathMounts: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  extraContainers: []
+  initContainers: []
+  podDisruptionBudget:
+    enabled: false
+    labels: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  podAnnotations: {}
+  containerWorkingDir: ""
+  resources: {}
+  securityContext: {}
+  podSecurityContext: {}
+  cacheMountPath: /cache
+  
+  service:
+    annotations: {}
+    labels: {}
+    clusterIP: ""
+    externalIPs: []
+    extraServicePorts: []
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    servicePort: 8481
+    targetPort: http
+    type: ClusterIP
+ 
+  ingress:
+    enabled: false
+    annotations: {}
+    extraLabels: {}
+    hosts: []
+    tls: []
+    pathType: Prefix
+
+  statefulSet:
+    enabled: false
+    podManagementPolicy: OrderedReady
+    service:
+      annotations: {}
+      labels: {}
+      servicePort: 8481
+
+  persistentVolume:
+    enabled: false
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+    labels: {}
+    existingClaim: ""
+    size: 1Gi
+    subPath: ""
+
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    extraLabels: {}
+    annotations: {}
+    relabelings: []
+
+
+vminsert:
+  enabled: true
+  name: vminsert
+  strategy: {}
+  image:
+    repository: victoriametrics/vminsert
+    tag: v1.93.1-cluster
+    pullPolicy: IfNotPresent
+  nodeSelector: 
+    node-group: infra
+  replicaCount: 1
+  priorityClassName: ""
+  fullnameOverride: ""
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+  annotations: {}
+  extraLabels: {}
+  env: []
+  suppressStorageFQDNsRender: false
+  automountServiceAccountToken: true
+
+  probe:
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    liveness:
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+  horizontalPodAutoscaler:
+    enabled: false
+    maxReplicas: 1
+    minReplicas: 1
+    metrics: []
+
+  extraVolumes: []
+  extraVolumeMounts: []
+  extraContainers: []
+  initContainers: []
+
+  podDisruptionBudget:
+    enabled: false
+    labels: {}
+
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  podAnnotations: {}
+  containerWorkingDir: ""
+  resources: {}
+  securityContext: {}
+  podSecurityContext: {}
+
+  service:
+    annotations: {}
+    labels: {}
+    clusterIP: ""
+    externalIPs: []
+    extraServicePorts: []
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    servicePort: 8480
+    targetPort: http
+    type: ClusterIP
+    udp: false
+
+  ingress:
+    enabled: false
+    annotations: {}
+    extraLabels: {}
+    hosts: []
+    tls: []
+    pathType: Prefix
+
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    extraLabels: {}
+    annotations: {}
+    relabelings: []
+
+
+vmstorage:
+  enabled: true
+  name: vmstorage
+  image:
+    repository: victoriametrics/vmstorage
+    tag: v1.93.1-cluster
+    pullPolicy: IfNotPresent
+  nodeSelector:
+    node-group: infra
+  replicaCount: 1
+  priorityClassName: ""
+  fullnameOverride:
+  automountServiceAccountToken: true
+  env: []
+  retentionPeriod: 1
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+  extraHostPathMounts: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  extraContainers: []
+  extraSecretMounts: []
+  initContainers: []
+
+  podDisruptionBudget:
+    enabled: false
+    labels: {}
+
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+  persistentVolume:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+    labels: {}
+    storageClass: ""
+    existingClaim: ""
+    mountPath: /storage
+    size: 1Gi
+    subPath: ""
+
+  podAnnotations: {}
+  annotations: {}
+  extraLabels: {}
+  containerWorkingDir: ""
+  podManagementPolicy: OrderedReady
+  resources: {}
+  securityContext: {}
+  podSecurityContext: {}
+
+  service:
+    annotations: {}
+    labels: {}
+    servicePort: 8482
+    vminsertPort: 8400
+    vmselectPort: 8401
+    extraServicePorts: []
+  terminationGracePeriodSeconds: 10
+
+  probe:
+    readiness:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    liveness:
+      tcpSocket:
+        port: http
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 10
+
+  vmbackupmanager:
+    enable: false
+    eula: false
+    image:
+      repository: victoriametrics/vmbackupmanager
+      tag: v1.93.0-enterprise
+    disableHourly: false
+    disableDaily: false
+    disableWeekly: false
+    disableMonthly: false
+    destination: ""
+    retention:
+      keepLastHourly: 2
+      keepLastDaily: 2
+      keepLastWeekly: 2
+      keepLastMonthly: 2
+    extraArgs:
+      envflag.enable: "true"
+      envflag.prefix: VM_
+      loggerFormat: json
+    restore:
+      onStart:
+        enabled: false
+    resources: {}
+    env: []
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: manager-http
+      initialDelaySeconds: 5
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    livenessProbe:
+      tcpSocket:
+        port: manager-http
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 10
+    extraSecretMounts: []
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    extraLabels: {}
+    annotations: {}
+    relabelings: []
